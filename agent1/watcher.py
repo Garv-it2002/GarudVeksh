@@ -1,15 +1,19 @@
 """Local UDP edge gateway for factory-machine telemetry."""
 
 import json
+import math
 import os
 import re
 import selectors
 import socket
+import threading
 import uuid
 from collections import defaultdict, deque
 from datetime import datetime, timezone
 from pathlib import Path
 import time
+
+from agent2.agent import validate_telemetry
 
 
 class EdgeGateway:
@@ -18,10 +22,15 @@ class EdgeGateway:
 	BUFFER_SIZE = 30
 	COOLDOWN_SECONDS = 30.0
 
-	def __init__(self, host=HOST, port=PORT, output_dir=None, cooldown_seconds=COOLDOWN_SECONDS):
+	def __init__(self, host=HOST, port=PORT, output_dir=None, cooldown_seconds=COOLDOWN_SECONDS, on_telemetry=None):
 		self.buffers = defaultdict(lambda: deque(maxlen=self.BUFFER_SIZE))
 		self._cooldowns = {}
 		self._cooldown_seconds = cooldown_seconds
+		self._on_telemetry = on_telemetry
+		self._closed = threading.Event()
+		self._registry_path = Path(__file__).resolve().parents[1] / "machine_registry.json"
+		self._registry_mtime = None
+		self._registry = {}
 		self._output_dir = (
 			Path(output_dir)
 			if output_dir is not None
@@ -41,6 +50,45 @@ class EdgeGateway:
 	@staticmethod
 	def _safe_machine_id(machine_id):
 		return re.sub(r"[^A-Za-z0-9_.-]+", "_", machine_id).strip("._") or "unknown_machine"
+
+	def _load_registry(self):
+		try:
+			mtime = self._registry_path.stat().st_mtime_ns
+			if mtime != self._registry_mtime:
+				data = json.loads(self._registry_path.read_text(encoding="utf-8"))
+				self._registry = data if isinstance(data, dict) else {}
+				self._registry_mtime = mtime
+		except (OSError, json.JSONDecodeError):
+			self._registry = {}
+			self._registry_mtime = None
+		return self._registry
+
+	def _registered_field_anomalies(self, machine_id, payload, telemetry_buffer):
+		registry = self._load_registry()
+		entry = registry.get(machine_id, {})
+		fields = entry.get("fields", {}) if isinstance(entry, dict) else {}
+		metrics = payload.get("metrics", {})
+		if not isinstance(fields, dict) or not isinstance(metrics, dict):
+			return []
+
+		reasons = []
+		for field_name in fields:
+			current = metrics.get(field_name)
+			if isinstance(current, bool) or not isinstance(current, (int, float)) or not math.isfinite(current):
+				continue
+			history = []
+			for sample in list(telemetry_buffer)[:-1]:
+				value = sample.get("metrics", {}).get(field_name)
+				if isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value):
+					history.append(float(value))
+			if len(history) < 5:
+				continue
+			mean = sum(history) / len(history)
+			variance = sum((value - mean) ** 2 for value in history) / len(history)
+			threshold = max(4.0 * math.sqrt(variance), abs(mean) * 0.02, 1e-9)
+			if abs(float(current) - mean) > threshold:
+				reasons.append("{}={}{} deviated from baseline".format(field_name, current, fields[field_name]))
+		return reasons
 
 	def _save_anomaly(self, machine_id, trigger_flags, telemetry_buffer):
 		event_timestamp = datetime.now(timezone.utc)
@@ -83,9 +131,32 @@ class EdgeGateway:
 		telemetry_buffer = self.buffers[machine_id]
 		telemetry_buffer.append(payload)
 		flags = payload.get("flags")
-		if not isinstance(flags, dict):
-			return None
-		trigger_flags = [name for name, value in flags.items() if value is True]
+		registry = self._load_registry()
+		registration = registry.get(machine_id, {})
+		registered_fields = registration.get("fields", {}) if isinstance(registration, dict) else {}
+		candidate_fields = self._registered_field_anomalies(machine_id, payload, telemetry_buffer)
+		assessment = validate_telemetry(
+			machine_id,
+			payload.get("metrics", {}),
+			flags=flags,
+			registered_fields=registered_fields,
+			status=payload.get("status", "RUNNING"),
+		)
+		anomaly_fields = assessment["issues"]
+		relay_payload = dict(payload)
+		relay_payload["field_variations"] = candidate_fields
+		relay_payload["operational_assessment"] = assessment
+		relay_payload["validated_anomalies"] = anomaly_fields
+		telemetry_buffer[-1] = relay_payload
+		trigger_flags = [
+			"{}: {}".format(issue["field"], issue["reason"])
+			for issue in anomaly_fields
+		]
+		if self._on_telemetry is not None:
+			try:
+				self._on_telemetry(relay_payload)
+			except Exception as exc:
+				print("Telemetry relay failed: {}".format(exc), flush=True)
 		if not trigger_flags:
 			return None
 
@@ -110,8 +181,14 @@ class EdgeGateway:
 	def serve_forever(self):
 		print("Edge Gateway listening on {}:{}".format(*self._socket.getsockname()), flush=True)
 		try:
-			while True:
-				for key, _ in self._selector.select(timeout=0.5):
+			while not self._closed.is_set():
+				try:
+					ready = self._selector.select(timeout=0.5)
+				except (OSError, ValueError):
+					if self._closed.is_set():
+						break
+					raise
+				for key, _ in ready:
 					try:
 						datagram, _address = key.fileobj.recvfrom(65535)
 					except BlockingIOError:
@@ -123,6 +200,9 @@ class EdgeGateway:
 			self.close()
 
 	def close(self):
+		if self._closed.is_set():
+			return
+		self._closed.set()
 		self._selector.close()
 		self._socket.close()
 

@@ -1,0 +1,13 @@
+{
+  "M1_CNC_MILL": {
+    "manual": "manual_m1_cnc_v3",
+    "fields": {
+      "spindle_rpm": "rpm",
+      "bearing_temp_c": "°C",
+      "vibration_rms": "mm/s",
+      "coolant_flow_lpm": "L/mm",
+      "spindle_load_pct": "%"
+    },
+    "type": "CNC Mill"
+  }
+}

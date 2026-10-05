@@ -33,8 +33,8 @@ INCOMING_DIR.mkdir(parents=True, exist_ok=True)
 ARCHIVE_DIR.mkdir(parents=True, exist_ok=True)
 
 SYSTEM_INSTRUCTION = """You are an autonomous industrial diagnostic AI. You receive 15-second telemetry windows of failing machines.
-1. Identify the mechanical failure.
-2. You MUST use the execute_control_action tool to mitigate it.
+1. Use operational_assessment and validated_anomalies as the authoritative Agent 1 limit check.
+2. Identify the confirmed mechanical failure and use execute_control_action to mitigate it automatically.
 - For M1_CNC_MILL thermal/vibration spikes, action="THROTTLE_DOWN", target_value=2000.
 - For M2_HYDRAULIC_PRESS pressure drops, action="DEPRESSURIZE_PARK", target_value=15.0.
 - For M3_VFD_CONVEYOR amperage spikes (jam), action="REVERSE_CLEAR", target_value=-15.0.
@@ -110,7 +110,17 @@ def process_anomaly_file(filepath: str) -> bool:
     """Analyze an anomaly file, execute returned tool calls, then archive it."""
     with open(filepath, "r", encoding="utf-8") as anomaly_file:
         json_content_string = anomaly_file.read()
-    json.loads(json_content_string)
+    anomaly_event = json.loads(json_content_string)
+    telemetry_buffer = anomaly_event.get("telemetry_buffer", [])
+    latest_sample = telemetry_buffer[-1] if telemetry_buffer else {}
+    assessment = latest_sample.get("operational_assessment", {})
+    if not isinstance(assessment, dict) or assessment.get("validated") is not True:
+        rejected_dir = os.path.join(str(ARCHIVE_DIR), "unvalidated")
+        os.makedirs(rejected_dir, exist_ok=True)
+        rejected_path = os.path.join(rejected_dir, os.path.basename(filepath))
+        shutil.move(filepath, rejected_path)
+        print("Skipped unvalidated anomaly; archived {}".format(rejected_path), flush=True)
+        return False
 
     response = client.models.generate_content(
         model=MODEL_NAME,

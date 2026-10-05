@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b0f12">
+  <title>Nexus Factory Control</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Space Grotesk', 'sans-serif'],
+            mono: ['DM Mono', 'monospace']
+          },
+          colors: {
+            ink: '#0b0f12',
+            panel: '#11171b',
+            line: '#263238',
+            signal: '#63e6be',
+            amber: '#ffc857',
+            danger: '#ff6b64'
+          }
+        }
+      }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
+  <script src="https://unpkg.com/lucide@latest" defer></script>
+  <script src="app.js" defer></script>
+  <style>
+    body {
+      background-color: #0b0f12;
+      background-image: linear-gradient(rgba(124, 151, 157, .035) 1px, transparent 1px), linear-gradient(90deg, rgba(124, 151, 157, .035) 1px, transparent 1px);
+      background-size: 36px 36px;
+    }
+    .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+    .scrollbar-thin::-webkit-scrollbar-thumb { background: #35434a; border-radius: 4px; }
+    .chart-wrap { position: relative; min-height: 220px; height: 220px; }
+    .mono-data { font-family: 'DM Mono', monospace; font-variant-numeric: tabular-nums; }
+    input, select { color-scheme: dark; }
+    #navDrawer.drawer-open { transform: translateX(0); }
+  </style>
+</head>
+<body class="min-h-screen font-sans text-slate-100 antialiased selection:bg-signal/30 selection:text-white">
+  <div class="min-h-screen">
+    <header class="sticky top-0 z-40 border-b border-line bg-ink/95 backdrop-blur">
+      <div class="mx-auto flex h-[68px] max-w-[1600px] items-center gap-4 px-4 sm:px-6 lg:px-8">
+        <button id="menuButton" type="button" aria-label="Open navigation" aria-expanded="false" class="grid h-10 w-10 shrink-0 place-items-center rounded-md border border-line bg-panel text-slate-300 transition hover:border-signal/50 hover:text-signal">
+          <i data-lucide="menu" class="h-5 w-5"></i>
+        </button>
+        <a href="#live" data-route="live" class="flex min-w-0 items-center gap-3">
+          <span class="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-signal text-ink"><i data-lucide="factory" class="h-5 w-5"></i></span>
+          <span class="truncate text-[15px] font-semibold tracking-wide">Nexus <span class="text-slate-400">Factory Control</span></span>
+        </a>
+        <div class="ml-auto hidden items-center gap-2 md:flex">
+          <span class="mr-3 font-mono text-[10px] uppercase tracking-[0.16em] text-slate-500">Plant 04 / Singapore</span>
+          <span id="headerConnectionDot" class="h-2 w-2 rounded-full bg-amber"></span>
+          <span id="headerConnectionText" class="font-mono text-xs text-slate-400">Starting</span>
+        </div>
+      </div>
+    </header>
+
+    <div id="drawerBackdrop" class="fixed inset-0 z-40 hidden bg-black/60"></div>
+    <aside id="navDrawer" class="fixed inset-y-0 left-0 z-50 w-[290px] -translate-x-full border-r border-line bg-[#0e1417] p-5 transition-transform duration-200">
+      <div class="mb-8 flex items-center justify-between">
+        <div class="font-mono text-[10px] uppercase tracking-[0.18em] text-slate-500">Navigation</div>
+        <button id="closeDrawer" type="button" aria-label="Close navigation" class="grid h-9 w-9 place-items-center rounded-md border border-line text-slate-400 hover:text-white"><i data-lucide="x" class="h-4 w-4"></i></button>
+      </div>
+      <nav class="space-y-1" aria-label="Main navigation">
+        <button data-route="live" class="nav-link flex w-full items-center gap-3 rounded-md bg-signal/10 px-3 py-3 text-left text-sm font-medium text-signal"><i data-lucide="activity" class="h-4 w-4"></i>Live Operations</button>
+        <button data-route="registration" class="nav-link flex w-full items-center gap-3 rounded-md px-3 py-3 text-left text-sm text-slate-400 hover:bg-white/5 hover:text-white"><i data-lucide="clipboard-plus" class="h-4 w-4"></i>Machine Registration</button>
+        <button data-route="demo" class="nav-link flex w-full items-center gap-3 rounded-md px-3 py-3 text-left text-sm text-slate-400 hover:bg-white/5 hover:text-white"><i data-lucide="sliders-horizontal" class="h-4 w-4"></i>Demo Control Panel</button>
+      </nav>
+      <div class="absolute inset-x-5 bottom-5 border-t border-line pt-4">
+        <div class="flex items-center gap-2 text-xs text-slate-500"><span class="h-1.5 w-1.5 rounded-full bg-signal"></span>EDGE GATEWAY <span class="ml-auto font-mono">127.0.0.1</span></div>
+      </div>
+    </aside>
+
+    <main class="mx-auto max-w-[1600px] px-4 pb-12 pt-7 sm:px-6 lg:px-8">
+      <section id="screen-live" data-screen="live" class="space-y-7">
+        <div class="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+          <div>
+            <div class="mb-2 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-signal"><span class="h-px w-7 bg-signal"></span>Operations / Overview</div>
+            <h1 class="text-3xl font-semibold tracking-tight text-white sm:text-[36px]">Live Operations</h1>
+            <p class="mt-1 text-sm text-slate-500">Factory work cell · real-time machine health</p>
+          </div>
+          <div class="flex items-center gap-3 self-start rounded-md border border-line bg-panel px-3 py-2 sm:self-auto">
+            <i data-lucide="clock-3" class="h-4 w-4 text-slate-500"></i>
+            <span id="currentTime" class="mono-data text-xs text-slate-300">--:--:-- UTC</span>
+            <span class="h-4 w-px bg-line"></span>
+            <span id="transportLabel" class="font-mono text-[10px] uppercase tracking-wider text-amber">CONNECTING</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <article class="rounded-md border border-line bg-panel p-4 sm:p-5">
+            <div class="flex items-center justify-between text-xs text-slate-400"><span>Total Machines</span><i data-lucide="boxes" class="h-4 w-4 text-slate-600"></i></div>
+            <div id="kpiTotal" class="mono-data mt-4 text-3xl font-medium text-white">03</div>
+            <div class="mt-2 font-mono text-[10px] uppercase tracking-wider text-slate-600">Registered assets</div>
+          </article>
+          <article class="rounded-md border border-line bg-panel p-4 sm:p-5">
+            <div class="flex items-center justify-between text-xs text-slate-400"><span>Healthy</span><i data-lucide="circle-check" class="h-4 w-4 text-signal"></i></div>
+            <div id="kpiHealthy" class="mono-data mt-4 text-3xl font-medium text-signal">03</div>
+            <div class="mt-2 font-mono text-[10px] uppercase tracking-wider text-slate-600">Running within limits</div>
+          </article>
+          <article class="rounded-md border border-line bg-panel p-4 sm:p-5">
+            <div class="flex items-center justify-between text-xs text-slate-400"><span>Critical</span><i data-lucide="triangle-alert" class="h-4 w-4 text-danger"></i></div>
+            <div id="kpiCritical" class="mono-data mt-4 text-3xl font-medium text-danger">00</div>
+            <div class="mt-2 font-mono text-[10px] uppercase tracking-wider text-slate-600">Faults requiring response</div>
+          </article>
+        </div>
+
+        <section class="overflow-hidden rounded-md border border-line bg-panel" aria-labelledby="machineListTitle">
+          <div class="flex flex-col gap-3 border-b border-line px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+            <div>
+              <h2 id="machineListTitle" class="text-sm font-semibold text-white">Machine Fleet</h2>
+              <p class="mt-1 text-xs text-slate-500">Select an asset to inspect telemetry and event history</p>
+            </div>
+            <div class="flex items-center gap-2 text-[10px] font-mono uppercase tracking-wider text-slate-500"><span class="h-2 w-2 rounded-full bg-signal"></span>Telemetry stream active</div>
+          </div>
+          <div class="scrollbar-thin overflow-x-auto">
+            <table class="w-full min-w-[600px] border-collapse text-left">
+              <thead class="bg-[#0d1316] text-[10px] uppercase tracking-[0.14em] text-slate-500">
+                <tr><th class="w-16 px-4 py-3 font-medium sm:px-5">S.No</th><th class="px-4 py-3 font-medium">Machine ID</th><th class="px-4 py-3 font-medium">Type</th><th class="px-4 py-3 font-medium">Status</th><th class="w-12 px-4 py-3"></th></tr>
+              </thead>
+              <tbody id="machineRows" class="divide-y divide-line"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <section id="screen-registration" data-screen="registration" class="hidden">
+        <div class="mb-7">
+          <div class="mb-2 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-signal"><span class="h-px w-7 bg-signal"></span>Asset Registry</div>
+          <h1 class="text-3xl font-semibold tracking-tight text-white">Machine Registration</h1>
+          <p class="mt-1 text-sm text-slate-500">Add an asset and attach its operating manual.</p>
+        </div>
+        <div class="mx-auto max-w-3xl rounded-md border border-line bg-panel">
+          <div class="flex items-center gap-3 border-b border-line px-5 py-4"><span class="grid h-9 w-9 place-items-center rounded-md border border-line bg-ink text-signal"><i data-lucide="factory" class="h-4 w-4"></i></span><div><h2 class="text-sm font-semibold">Asset details</h2><p class="text-xs text-slate-500">Fields marked required must be completed.</p></div></div>
+          <form id="registrationForm" class="space-y-5 p-5 sm:p-7">
+            <div class="grid gap-5 sm:grid-cols-2">
+              <label class="block"><span class="mb-2 block text-xs font-medium text-slate-300">Machine ID <span class="text-danger">*</span></span><input id="machineIdInput" name="machineId" required placeholder="e.g. M4_PACKAGING_LINE" class="w-full rounded-md border border-line bg-ink px-3 py-2.5 text-sm outline-none placeholder:text-slate-700 focus:border-signal"></label>
+              <label class="block"><span class="mb-2 block text-xs font-medium text-slate-300">Machine Type <span class="text-danger">*</span></span><select id="machineTypeSelect" name="machineType" required class="w-full rounded-md border border-line bg-ink px-3 py-2.5 text-sm outline-none focus:border-signal"><option value="">Select machine type</option><option>CNC Mill</option><option>Hydraulic Press</option><option>VFD Conveyor</option><option value="__new__">Add New Type</option></select></label>
+            </div>
+            <label id="newTypeField" class="hidden max-w-sm"><span class="mb-2 block text-xs font-medium text-slate-300">New Machine Type</span><input id="newTypeInput" placeholder="Enter machine type" class="w-full rounded-md border border-line bg-ink px-3 py-2.5 text-sm outline-none placeholder:text-slate-700 focus:border-signal"></label>
+            <label class="block max-w-sm"><span class="mb-2 block text-xs font-medium text-slate-300">Manual ID <span class="text-danger">*</span></span><input id="manualIdInput" name="manualId" required placeholder="e.g. manual_m4_v1" class="w-full rounded-md border border-line bg-ink px-3 py-2.5 text-sm outline-none placeholder:text-slate-700 focus:border-signal"></label>
+            <section class="space-y-3" aria-labelledby="telemetryFieldsTitle">
+              <div class="flex items-center justify-between"><h3 id="telemetryFieldsTitle" class="text-xs font-medium text-slate-300">Telemetry Fields</h3><button id="addTelemetryFieldButton" type="button" class="inline-flex items-center gap-1.5 rounded border border-line px-3 py-2 text-xs text-slate-300 hover:border-signal/50 hover:text-signal"><i data-lucide="plus" class="h-3.5 w-3.5"></i>Add Field</button></div>
+              <div id="telemetryFieldRows" class="space-y-2"></div>
+            </section>
+            <label class="block"><span class="mb-2 block text-xs font-medium text-slate-300">Upload Manual <span class="text-slate-600">· PDF</span></span><input id="manualFileInput" name="manualFile" type="file" accept=".pdf,application/pdf" class="block w-full cursor-pointer rounded-md border border-line bg-ink text-xs text-slate-400 file:mr-4 file:border-0 file:border-r file:border-line file:bg-[#182126] file:px-4 file:py-3 file:text-xs file:font-medium file:text-slate-300 hover:file:bg-[#202c32]"></label>
+            <div class="flex flex-col gap-3 border-t border-line pt-5 sm:flex-row sm:items-center sm:justify-between"><span class="text-xs text-slate-600">Registry is stored locally by the dashboard backend.</span><button id="registrationSubmitButton" type="submit" class="inline-flex items-center justify-center gap-2 rounded-md bg-signal px-4 py-2.5 text-sm font-semibold text-ink transition hover:bg-[#83f2d0]"><i data-lucide="plus" class="h-4 w-4"></i><span>Register Machine</span></button></div>
+          </form>
+        </div>
+        <section class="mx-auto mt-5 max-w-3xl rounded-md border border-line bg-panel" aria-labelledby="registeredMachinesTitle">
+          <div class="border-b border-line px-5 py-4"><h2 id="registeredMachinesTitle" class="text-sm font-semibold">Registered Machines</h2><p class="mt-1 text-xs text-slate-500">Edit telemetry fields or remove a registry entry.</p></div>
+          <div id="registeredMachineList" class="divide-y divide-line"></div>
+        </section>
+      </section>
+
+      <section id="screen-demo" data-screen="demo" class="hidden space-y-7">
+        <div class="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+          <div><div class="mb-2 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-amber"><span class="h-px w-7 bg-amber"></span>Development / Sandbox</div><h1 class="text-3xl font-semibold tracking-tight text-white">Demo Control Panel</h1><p class="mt-1 text-sm text-slate-500">Inject simulated faults and test machine response.</p></div>
+          <button id="resetAllButton" type="button" class="inline-flex items-center justify-center gap-2 rounded-md border border-danger/40 bg-danger/10 px-4 py-2.5 text-sm font-semibold text-danger transition hover:bg-danger/20"><i data-lucide="rotate-ccw" class="h-4 w-4"></i>RESET ALL</button>
+        </div>
+        <div class="grid gap-3 md:grid-cols-2">
+          <article class="flex flex-col justify-between gap-4 rounded-md border border-line bg-panel p-4 sm:flex-row sm:items-center">
+            <div><div class="font-mono text-[10px] uppercase tracking-[0.15em] text-slate-500">Telemetry Watcher</div><div id="watcherServiceState" class="mt-1 text-xs text-slate-400">Stopped · UDP 5005</div></div>
+            <button id="watcherServiceButton" type="button" class="inline-flex min-h-10 items-center justify-center gap-2 rounded border border-signal/30 bg-signal/10 px-4 py-2 text-xs font-medium text-signal transition hover:bg-signal/20"><i data-lucide="play" class="h-4 w-4"></i><span>Start Watcher</span></button>
+          </article>
+          <article class="flex flex-col justify-between gap-4 rounded-md border border-line bg-panel p-4 sm:flex-row sm:items-center">
+            <div><div class="font-mono text-[10px] uppercase tracking-[0.15em] text-slate-500">AI Diagnostic Agent</div><div id="agentServiceState" class="mt-1 text-xs text-slate-400">Stopped · waiting for anomalies</div></div>
+            <button id="agentServiceButton" type="button" disabled class="inline-flex min-h-10 items-center justify-center gap-2 rounded border border-line bg-white/5 px-4 py-2 text-xs font-medium text-slate-500 transition disabled:cursor-not-allowed disabled:opacity-50"><i data-lucide="play" class="h-4 w-4"></i><span>Start AI Agent</span></button>
+          </article>
+        </div>
+        <div id="demoMachineGrid" class="grid gap-4 lg:grid-cols-3"></div>
+        <div class="flex gap-3 rounded-md border border-line bg-panel px-4 py-3 text-xs text-slate-500"><i data-lucide="radio" class="h-4 w-4 shrink-0 text-signal"></i><span>Commands are sent over the telemetry WebSocket as control messages; the local backend should forward them to the machine UDP control ports.</span></div>
+      </section>
+    </main>
+
+    <div id="toast" role="status" aria-live="polite" class="pointer-events-none fixed bottom-5 right-5 z-[70] translate-y-3 opacity-0 transition-all duration-200"></div>
+  </div>
+</body>
+</html>

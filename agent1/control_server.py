@@ -11,6 +11,11 @@ CONTROL_PORTS = {
     "M2_HYDRAULIC_PRESS": 5012,
     "M3_VFD_CONVEYOR": 5013,
 }
+INJECTION_METHODS = {
+    "M1_CNC_MILL": {"INJECT_BEARING_OVERHEAT": "inject_bearing_thermal_runaway"},
+    "M2_HYDRAULIC_PRESS": {"INJECT_SEAL_RUPTURE": "inject_seal_rupture"},
+    "M3_VFD_CONVEYOR": {"INJECT_BELT_JAM": "inject_mechanical_jam"},
+}
 
 
 class ControlCommandServer:
@@ -52,7 +57,11 @@ class ControlCommandServer:
                 request_id = command.get("request_id")
                 action = command.get("action")
                 if command.get("machine_id") == self.machine.MACHINE_ID:
-                    accepted = self.machine.receive_control_command(command)
+                    injection_method = INJECTION_METHODS.get(self.machine.MACHINE_ID, {}).get(action)
+                    if injection_method:
+                        accepted = getattr(self.machine, injection_method)()
+                    else:
+                        accepted = self.machine.receive_control_command(command)
             except (UnicodeDecodeError, json.JSONDecodeError, AttributeError, TypeError):
                 pass
 
