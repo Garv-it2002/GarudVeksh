@@ -1,13 +1,72 @@
 {
-  "M1_CNC_MILL": {
-    "manual": "manual_m1_cnc_v3",
+  "DMG_MORI_DMU_50": {
+    "manual": "manual_dmgmori_v1",
+    "type": "5-Axis CNC Mill",
+    "description": "DMG MORI DMU 50 5-Axis CNC Mill. Nominal Spindle RPM 12000, Coolant Flow 40 L/min, Vibration 0.8 mm/s RMS. ISO 10816-3 Zone A/B boundary at 2.8 mm/s. Zone D (critical) above 4.5 mm/s.",
     "fields": {
-      "spindle_rpm": "rpm",
-      "bearing_temp_c": "°C",
-      "vibration_rms": "mm/s",
-      "coolant_flow_lpm": "L/mm",
-      "spindle_load_pct": "%"
+      "Spindle/RPM":               { "unit": "rpm",   "role": "PV", "nominal": 12000, "warning_range": [10000, 13000], "critical_min": 100 },
+      "Spindle/Coolant_Flow_Lmin": { "unit": "L/min", "role": "PV", "nominal": 40.0,  "warning_range": [30.0, 55.0],   "critical_min": 10.0 },
+      "Spindle/Vibration_mm_s":    { "unit": "mm/s",  "role": "PV", "nominal": 0.8,   "warning_range": [0.0, 2.8],     "critical_max": 4.5 }
     },
-    "type": "CNC Mill"
+    "setpoints": {
+      "Spindle/Coolant_Flow_SP": { "unit": "L/min", "role": "SP", "tau_s": 8,  "nominal": 40.0, "min": 10.0, "max": 60.0 },
+      "Spindle/RPM_SP":          { "unit": "rpm",   "role": "SP", "tau_s": 12, "nominal": 12000, "min": 0, "max": 12000 }
+    },
+    "governance": {
+      "auto_mitigate": {
+        "Spindle/Coolant_Flow_SP": { "max_delta": 20, "rationale": "Chiller PWM adjustment. Low-risk closed-loop action." }
+      },
+      "human_gated": {
+        "Spindle/RPM_SP": { "rationale": "Spindle deceleration is SIL-2. Requires supervisor authorization per ISA-84." }
+      },
+      "context": "ISA-84 SIL-2 certified facility. Coolant flow setpoint adjustments are permitted autonomously. Spindle speed reduction below idle requires operator sign-off. IF Vibration crosses 4.5 mm/s (Zone D), this indicates a catastrophic spindle bearing rupture. Setpoint adjustments will NOT work. You must halt the machine by recommending action 'MAINTENANCE_LOCKOUT' and request a part replacement ticket."
+    }
+  },
+  "SCHULER_PRESS": {
+    "manual": "manual_schuler_v2",
+    "type": "Hydraulic Stamping Press",
+    "description": "Schuler 200-Ton Hydraulic Stamping Press. Nominal Ram Pressure 4000 kN, Oil Temp 45C, Cycle Time 3.2s. Thermal creep above 50C causes viscosity breakdown. Seal rupture below 2000 kN is catastrophic.",
+    "fields": {
+      "Hydraulic/Ram_Pressure_kN": { "unit": "kN", "role": "PV", "nominal": 4000.0, "warning_range": [3000.0, 4300.0], "critical_min": 2000.0 },
+      "Hydraulic/Oil_Temp_C":      { "unit": "C",  "role": "PV", "nominal": 45.0,   "warning_range": [35.0, 52.0],     "critical_max": 65.0 },
+      "Production/Cycle_Time_s":   { "unit": "s",  "role": "PV", "nominal": 3.2,    "warning_range": [2.5, 4.0],       "critical_max": 6.0 }
+    },
+    "setpoints": {
+      "Hydraulic/Oil_Temp_SP":        { "unit": "C",  "role": "SP", "tau_s": 10, "nominal": 45.0,   "min": 30.0, "max": 60.0 },
+      "Hydraulic/System_Pressure_SP": { "unit": "kN", "role": "SP", "tau_s": 5,  "nominal": 4000.0, "min": 0,    "max": 4500.0 }
+    },
+    "governance": {
+      "auto_mitigate": {
+        "Hydraulic/Oil_Temp_SP": { "max_delta": 10, "rationale": "Cooling bypass engagement. Low-risk thermal management." }
+      },
+      "human_gated": {
+        "Hydraulic/System_Pressure_SP": { "rationale": "Pressure depressurization is SIL-3. Requires supervisor." }
+      },
+      "context": "ISA-84 SIL-3 facility. Thermal management setpoints (Oil_Temp_SP) are permitted autonomously. Any hydraulic pressure change exceeding 500 kN delta requires human operator confirmation. IF Ram pressure drops below 2000 kN, this indicates a blown hydraulic seal. Setpoints will not fix this. You must halt the machine by recommending action 'MAINTENANCE_LOCKOUT' and request a part replacement ticket."
+    }
+  },
+  "SIEMENS_SINAMICS_VFD": {
+    "manual": "manual_siemens_v3",
+    "type": "Variable Frequency Drive",
+    "description": "Siemens Sinamics S120 VFD Conveyor Drive. Nominal Motor Current 14A, Output Freq 50Hz, IGBT Temp 60C. Startup inrush current transient (20-25A) is normal for first 3s. IGBT thermal runaway above 80C. Mechanical jam causes exponential current spike.",
+    "fields": {
+      "Drive/Motor_Current_A": { "unit": "A",  "role": "PV", "nominal": 14.0, "warning_range": [8.0, 25.0],   "critical_max": 40.0 },
+      "Drive/Output_Freq_Hz":  { "unit": "Hz", "role": "PV", "nominal": 50.0, "warning_range": [40.0, 55.0],  "critical_min": 5.0 },
+      "Drive/IGBT_Temp_C":     { "unit": "C",  "role": "PV", "nominal": 60.0, "warning_range": [45.0, 70.0],  "critical_max": 80.0 }
+    },
+    "setpoints": {
+      "Drive/Cabinet_Fan_SP": { "unit": "%",  "role": "SP", "tau_s": 6, "nominal": 50.0, "min": 0, "max": 100.0 },
+      "Drive/Output_Freq_SP": { "unit": "Hz", "role": "SP", "tau_s": 4, "nominal": 50.0, "min": 0, "max": 60.0 }
+    },
+    "governance": {
+      "auto_mitigate": {
+        "Drive/Cabinet_Fan_SP": { "max_delta": 50, "rationale": "Cabinet fan speed increase. Low-risk thermal management." }
+      },
+      "human_gated": {
+        "Drive/Output_Freq_SP": { "rationale": "Drive frequency reduction implies conveyor stop. SIL-2. Requires supervisor." }
+      },
+      "context": "ISA-84 SIL-2 facility. Cabinet fan speed adjustments are autonomous. Conveyor frequency reduction constitutes a production halt and requires supervisor confirmation. IF Motor current spikes above 40A, this indicates a mechanical conveyor jam or snapped belt. You must halt the machine by recommending action 'MAINTENANCE_LOCKOUT' and request maintenance clearing."
+    }
   }
 }
+

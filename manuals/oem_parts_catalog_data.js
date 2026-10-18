@@ -1,0 +1,118 @@
+/** Authentic Grounded OEM Maintenance Manuals & Parts Catalog */
+const OEM_PARTS_CATALOG = {
+  "DMG_MORI_DMU_50": {
+    "oem_manual_title": "DMG MORI DMU 50 5-Axis Machining Center Maintenance & Overhaul Manual (Rev 4.8)",
+    "section_reference": "Section 08.4: Motorized High-Speed Spindle Subassembly (pp. 142-148)",
+    "assemblies": {
+      "spindle_bearing_cartridge": {
+        "subsystem": "Spindle Bearing Cartridge Assembly",
+        "standard_service_interval_hours": 8000,
+        "parts": [
+          {
+            "part_name": "High-Precision Angular Contact Spindle Bearing Pair (Matched 15\u00b0)",
+            "oem_part_number": "SKF-7014-CD/P4ADGA",
+            "manufacturer": "SKF Precision Bearings",
+            "iso_grade": "P4A (ABEC 9 equivalent)",
+            "unit_cost_usd": 3850.0,
+            "vendor_lead_time_days": 1,
+            "primary_supplier": "SKF Industrial Distribution",
+            "installation_torque_nm": 65.0,
+            "required_technician_certification": "ISO 18436-2 Category II Vibration Analyst & Precision Spindle Specialist"
+          },
+          {
+            "part_name": "Spindle Labyrinth Rotary Shaft Seal & Viton O-Ring Set",
+            "oem_part_number": "DMG-239485-SL",
+            "manufacturer": "DMG MORI OEM Parts Center",
+            "iso_grade": "DIN 3760 Type AS",
+            "unit_cost_usd": 340.0,
+            "vendor_lead_time_days": 1,
+            "primary_supplier": "DMG MORI Direct Logistics",
+            "installation_torque_nm": 18.5,
+            "required_technician_certification": "DMG MORI Certified Field Service Technician"
+          },
+          {
+            "part_name": "Ultra-High Speed Synthetic Spindle Lubricating Grease (Cartridge)",
+            "oem_part_number": "KLUBER-ISOFLEX-NBU-15",
+            "manufacturer": "Kl\u00fcber Lubrication",
+            "iso_grade": "NLGI Grade 2",
+            "unit_cost_usd": 125.0,
+            "vendor_lead_time_days": 1,
+            "primary_supplier": "Motion Industries",
+            "installation_torque_nm": 0.0,
+            "required_technician_certification": "Certified Machine Lubrication Analyst (MLA I)"
+          }
+        ]
+      }
+    }
+  },
+  "SCHULER_PRESS": {
+    "oem_manual_title": "Schuler 200-Ton Hydraulic Stamping Press Service & Cylinder Overhaul Manual (Doc #SCH-HYD-200T-M)",
+    "section_reference": "Section 12.3: Primary Hydraulic Ram Cylinder & Manifold Seals (pp. 88-94)",
+    "assemblies": {
+      "ram_cylinder_pack": {
+        "subsystem": "High-Pressure Hydraulic Ram Cylinder Assembly",
+        "standard_service_interval_hours": 6000,
+        "parts": [
+          {
+            "part_name": "Main Ram Chevron High-Pressure Packing Seal Kit (350 Bar)",
+            "oem_part_number": "PARKER-PK-350-B90-V",
+            "manufacturer": "Parker Hannifin Engineered Seals",
+            "iso_grade": "ISO 5597 / DIN ISO 7425-1",
+            "unit_cost_usd": 2450.0,
+            "vendor_lead_time_days": 1,
+            "primary_supplier": "Parker Hannifin Distribution Center",
+            "installation_torque_nm": 140.0,
+            "required_technician_certification": "Fluid Power Hydraulic Specialist (CFPHS) & Schuler Field Engineer"
+          },
+          {
+            "part_name": "Cylinder Rod Wiper & Polyurethane Guide Ring Set",
+            "oem_part_number": "SCH-WPR-200T-99",
+            "manufacturer": "Schuler Presses AG",
+            "iso_grade": "DIN 7425",
+            "unit_cost_usd": 680.0,
+            "vendor_lead_time_days": 2,
+            "primary_supplier": "Schuler North America Parts",
+            "installation_torque_nm": 45.0,
+            "required_technician_certification": "Certified Fluid Power Mechanic (CFPM)"
+          }
+        ]
+      }
+    }
+  },
+  "SIEMENS_SINAMICS_VFD": {
+    "oem_manual_title": "Siemens SINAMICS S120 Drive & Infeed System Maintenance Manual (Catalog D 21.1)",
+    "section_reference": "Section 04.1: Power Module Cooling & Conveyor Belt Drive Assembly (pp. 52-57)",
+    "assemblies": {
+      "conveyor_drive_powertrain": {
+        "subsystem": "Infeed Conveyor Motor & Power Module Powertrain",
+        "standard_service_interval_hours": 10000,
+        "parts": [
+          {
+            "part_name": "Reinforced Anti-Static Industrial Timing Belt (Heavy Duty)",
+            "oem_part_number": "GATES-POLYC-8MGT-1200",
+            "manufacturer": "Gates Corporation",
+            "iso_grade": "ISO 9563 Anti-Static",
+            "unit_cost_usd": 380.0,
+            "vendor_lead_time_days": 1,
+            "primary_supplier": "Applied Industrial Technologies",
+            "installation_torque_nm": 32.0,
+            "required_technician_certification": "Level 2 Industrial Electro-Mechanical Technician"
+          },
+          {
+            "part_name": "Radial Deep Groove Conveyor Drum Drive Bearing",
+            "oem_part_number": "SKF-6310-2RS1/C3",
+            "manufacturer": "SKF Industrial",
+            "iso_grade": "ABEC 3 / C3 Clearance",
+            "unit_cost_usd": 165.0,
+            "vendor_lead_time_days": 1,
+            "primary_supplier": "Motion Industries",
+            "installation_torque_nm": 28.0,
+            "required_technician_certification": "Certified Maintenance & Reliability Technician (CMRT)"
+          }
+        ]
+      }
+    }
+  }
+};
+if (typeof window !== "undefined") window.OEM_PARTS_CATALOG = OEM_PARTS_CATALOG;
+if (typeof module !== "undefined" && module.exports) module.exports = OEM_PARTS_CATALOG;

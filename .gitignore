@@ -1,0 +1,20 @@
+# Configuration & Local Secrets
+config.js
+
+# Dependencies
+node_modules/
+package-lock.json
+
+# Scratch & Dev Tools
+scratch/
+tests/output/
+*.log
+
+# Firebase Cache & Logs
+.firebase/
+firebase-debug.log*
+firestore-debug.log*
+
+# OS Metadata
+.DS_Store
+Thumbs.db

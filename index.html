@@ -4,11 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0b0f12">
-  <title>Nexus Factory Control</title>
+  <title>Garduveksh — Autonomous Industrial Edge AI Suite</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio,line-clamp&version=3.4.3"></script>
   <script>
     tailwind.config = {
       theme: {
@@ -18,24 +18,36 @@
             mono: ['DM Mono', 'monospace']
           },
           colors: {
-            ink: '#0b0f12',
-            panel: '#11171b',
-            line: '#263238',
-            signal: '#63e6be',
-            amber: '#ffc857',
-            danger: '#ff6b64'
+            ink: '#1c2128',
+            panel: '#22272e',
+            line: '#373e47',
+            signal: '#769cbe', // Muted light blue instead of green
+            amber: '#e3b341', // Yellow Advisory
+            danger: '#fa4655' // Critical Red
           }
         }
       }
     };
   </script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
-  <script src="https://unpkg.com/lucide@latest" defer></script>
+  <script src="https://unpkg.com/lucide@0.359.0" defer></script>
+  <script src="config.js" defer></script>
+  <script src="assets/cctv/cctv_images_data.js" defer></script>
+  <script src="manuals/oem_parts_catalog_data.js" defer></script>
+  <script src="agent/clock_worker.js" defer></script>
+  <script src="machine/DMGMori_CNC.js" defer></script>
+  <script src="machine/Schuler_Press.js" defer></script>
+  <script src="machine/Siemens_VFD.js" defer></script>
+  <script src="agent/cctv_engine.js" defer></script>
+  <script src="agent/agent.js" defer></script>
+  <script src="agent/watcher.js" defer></script>
+  <script src="agent/control_server.js" defer></script>
+  <script src="agent/dashboard_bridge.js" defer></script>
   <script src="app.js" defer></script>
   <style>
     body {
-      background-color: #0b0f12;
-      background-image: linear-gradient(rgba(124, 151, 157, .035) 1px, transparent 1px), linear-gradient(90deg, rgba(124, 151, 157, .035) 1px, transparent 1px);
+      background-color: #1c2128;
+      background-image: linear-gradient(rgba(255, 255, 255, .03) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, .03) 1px, transparent 1px);
       background-size: 36px 36px;
     }
     .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -55,10 +67,9 @@
         </button>
         <a href="#live" data-route="live" class="flex min-w-0 items-center gap-3">
           <span class="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-signal text-ink"><i data-lucide="factory" class="h-5 w-5"></i></span>
-          <span class="truncate text-[15px] font-semibold tracking-wide">Nexus <span class="text-slate-400">Factory Control</span></span>
+          <span class="truncate text-[15px] font-semibold tracking-wide">Garduveksh <span class="text-slate-400">Industrial AI</span></span>
         </a>
         <div class="ml-auto hidden items-center gap-2 md:flex">
-          <span class="mr-3 font-mono text-[10px] uppercase tracking-[0.16em] text-slate-500">Plant 04 / Singapore</span>
           <span id="headerConnectionDot" class="h-2 w-2 rounded-full bg-amber"></span>
           <span id="headerConnectionText" class="font-mono text-xs text-slate-400">Starting</span>
         </div>
@@ -89,15 +100,21 @@
             <h1 class="text-3xl font-semibold tracking-tight text-white sm:text-[36px]">Live Operations</h1>
             <p class="mt-1 text-sm text-slate-500">Factory work cell · real-time machine health</p>
           </div>
-          <div class="flex items-center gap-3 self-start rounded-md border border-line bg-panel px-3 py-2 sm:self-auto">
-            <i data-lucide="clock-3" class="h-4 w-4 text-slate-500"></i>
-            <span id="currentTime" class="mono-data text-xs text-slate-300">--:--:-- UTC</span>
-            <span class="h-4 w-px bg-line"></span>
-            <span id="transportLabel" class="font-mono text-[10px] uppercase tracking-wider text-amber">CONNECTING</span>
+          <div class="flex items-center gap-3 self-start sm:self-auto">
+            <button id="downloadLogsButton" type="button" class="inline-flex items-center gap-2 rounded-md border border-line bg-panel px-3 py-2 text-xs font-medium text-slate-300 transition hover:border-signal/50 hover:text-signal">
+              <i data-lucide="download" class="h-4 w-4"></i>
+              <span>Download Logs</span>
+            </button>
+            <div class="flex items-center gap-3 rounded-md border border-line bg-panel px-3 py-2">
+              <i data-lucide="clock-3" class="h-4 w-4 text-slate-500"></i>
+              <span id="currentTime" class="mono-data text-xs text-slate-300">--:--:-- UTC</span>
+              <span class="h-4 w-px bg-line"></span>
+              <span id="transportLabel" class="font-mono text-[10px] uppercase tracking-wider text-amber">CONNECTING</span>
+            </div>
           </div>
         </div>
 
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <article class="rounded-md border border-line bg-panel p-4 sm:p-5">
             <div class="flex items-center justify-between text-xs text-slate-400"><span>Total Machines</span><i data-lucide="boxes" class="h-4 w-4 text-slate-600"></i></div>
             <div id="kpiTotal" class="mono-data mt-4 text-3xl font-medium text-white">03</div>
@@ -107,6 +124,11 @@
             <div class="flex items-center justify-between text-xs text-slate-400"><span>Healthy</span><i data-lucide="circle-check" class="h-4 w-4 text-signal"></i></div>
             <div id="kpiHealthy" class="mono-data mt-4 text-3xl font-medium text-signal">03</div>
             <div class="mt-2 font-mono text-[10px] uppercase tracking-wider text-slate-600">Running within limits</div>
+          </article>
+          <article class="rounded-md border border-line bg-panel p-4 sm:p-5">
+            <div class="flex items-center justify-between text-xs text-slate-400"><span>Advisory</span><i data-lucide="circle-alert" class="h-4 w-4 text-amber"></i></div>
+            <div id="kpiWarning" class="mono-data mt-4 text-3xl font-medium text-amber">00</div>
+            <div class="mt-2 font-mono text-[10px] uppercase tracking-wider text-slate-600">Auto-mitigating</div>
           </article>
           <article class="rounded-md border border-line bg-panel p-4 sm:p-5">
             <div class="flex items-center justify-between text-xs text-slate-400"><span>Critical</span><i data-lucide="triangle-alert" class="h-4 w-4 text-danger"></i></div>
@@ -132,13 +154,48 @@
             </table>
           </div>
         </section>
+
+        <!-- Autonomous Reasoning Trace Panel -->
+        <div class="mt-6 rounded-md border border-line bg-panel p-5 shadow-xl relative overflow-hidden">
+          <div class="absolute top-0 left-0 h-1 w-full bg-gradient-to-r from-transparent via-signal to-transparent opacity-50"></div>
+          <div class="flex items-center justify-between border-b border-line/50 pb-3 mb-3">
+            <div class="flex items-center gap-3 text-signal">
+              <i data-lucide="brain-circuit" class="h-5 w-5"></i>
+              <h2 class="font-mono text-sm font-semibold uppercase tracking-widest text-slate-200">Autonomous Reasoning Trace</h2>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-[9px] font-mono uppercase text-slate-500 tracking-widest">Engine: Edge Neural Core</span>
+              <span class="relative flex h-2 w-2">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-signal opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 bg-signal"></span>
+              </span>
+            </div>
+          </div>
+          <div id="geminiTraceLog" class="h-48 overflow-y-auto font-mono text-[11px] text-slate-400 space-y-4 scrollbar-thin rounded bg-ink/50 p-4 border border-line/50">
+            <div class="flex gap-3 text-slate-500 opacity-60">
+              <span class="shrink-0">[SYSTEM]</span>
+              <span>Autonomous Edge Intelligence Core online. Monitoring real-time Sparkplug B telemetry for anomalies...</span>
+            </div>
+          </div>
+        </div>
       </section>
 
       <section id="screen-registration" data-screen="registration" class="hidden">
         <div class="mb-7">
           <div class="mb-2 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-signal"><span class="h-px w-7 bg-signal"></span>Asset Registry</div>
           <h1 class="text-3xl font-semibold tracking-tight text-white">Machine Registration</h1>
-          <p class="mt-1 text-sm text-slate-500">Add an asset and attach its operating manual.</p>
+          <p class="mt-1 text-sm text-slate-500">View registered production assets and connected digital twins.</p>
+        </div>
+
+        <!-- Verified Cell Topology Notice -->
+        <div class="mx-auto mb-6 max-w-3xl rounded-md border border-signal/40 bg-signal/10 p-4 text-xs text-signal/90">
+          <div class="flex items-center gap-2 font-semibold text-signal">
+            <i data-lucide="shield-check" class="h-4 w-4"></i>
+            <span>Verified Cell Topology: Active Digital Twin Configuration</span>
+          </div>
+          <p class="mt-1.5 leading-relaxed text-slate-300">
+            Production cell is pre-configured with <strong>3 verified digital twins</strong> (<code class="text-white">DMG_MORI_DMU_50</code>, <code class="text-white">SCHULER_PRESS</code>, and <code class="text-white">SIEMENS_SINAMICS_VFD</code>). Asset registry topology is locked to the active production cell profile.
+          </p>
         </div>
         <div class="mx-auto max-w-3xl rounded-md border border-line bg-panel">
           <div class="flex items-center gap-3 border-b border-line px-5 py-4"><span class="grid h-9 w-9 place-items-center rounded-md border border-line bg-ink text-signal"><i data-lucide="factory" class="h-4 w-4"></i></span><div><h2 class="text-sm font-semibold">Asset details</h2><p class="text-xs text-slate-500">Fields marked required must be completed.</p></div></div>
@@ -175,13 +232,125 @@
           </article>
           <article class="flex flex-col justify-between gap-4 rounded-md border border-line bg-panel p-4 sm:flex-row sm:items-center">
             <div><div class="font-mono text-[10px] uppercase tracking-[0.15em] text-slate-500">AI Diagnostic Agent</div><div id="agentServiceState" class="mt-1 text-xs text-slate-400">Stopped · waiting for anomalies</div></div>
-            <button id="agentServiceButton" type="button" disabled class="inline-flex min-h-10 items-center justify-center gap-2 rounded border border-line bg-white/5 px-4 py-2 text-xs font-medium text-slate-500 transition disabled:cursor-not-allowed disabled:opacity-50"><i data-lucide="play" class="h-4 w-4"></i><span>Start AI Agent</span></button>
+            <button id="agentServiceButton" type="button" class="inline-flex min-h-10 items-center justify-center gap-2 rounded border border-signal/30 bg-signal/10 px-4 py-2 text-xs font-medium text-signal transition hover:bg-signal/20"><i data-lucide="play" class="h-4 w-4"></i><span>Start AI Agent</span></button>
           </article>
         </div>
         <div id="demoMachineGrid" class="grid gap-4 lg:grid-cols-3"></div>
         <div class="flex gap-3 rounded-md border border-line bg-panel px-4 py-3 text-xs text-slate-500"><i data-lucide="radio" class="h-4 w-4 shrink-0 text-signal"></i><span>Commands are sent over the telemetry WebSocket as control messages; the local backend should forward them to the machine UDP control ports.</span></div>
       </section>
     </main>
+
+    <!-- Autonomous CMMS & Procurement Requisition Modal -->
+    <div id="procurementModal" class="fixed inset-0 z-50 flex hidden items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+      <div class="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg border border-red-500/40 bg-[#161b22] p-6 shadow-2xl scrollbar-thin">
+        <div class="flex items-start justify-between border-b border-line pb-4">
+          <div class="flex items-center gap-3">
+            <div class="rounded-md bg-red-500/20 p-2 text-red-400">
+              <i data-lucide="package-search" class="h-6 w-6"></i>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h2 class="text-base font-semibold text-white">Autonomous CMMS Work Order & Purchase Requisition</h2>
+                <span id="poPriorityBadge" class="rounded bg-red-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-red-400">P1 - CRITICAL</span>
+              </div>
+              <p class="text-xs text-slate-400">Synthesized by Autonomous Procurement Agent · ServiceNow MM & SAP ERP</p>
+            </div>
+          </div>
+          <button id="closeProcurementModal" type="button" class="rounded p-1 text-slate-400 hover:bg-white/10 hover:text-white">
+            <i data-lucide="x" class="h-5 w-5"></i>
+          </button>
+        </div>
+
+        <div class="mt-5 space-y-4 text-xs">
+          <!-- IDs and Asset details -->
+          <div class="grid grid-cols-2 gap-3 rounded-md border border-line bg-ink/60 p-3 sm:grid-cols-4 font-mono">
+            <div>
+              <span class="text-[10px] uppercase text-slate-500">Work Order ID</span>
+              <p id="poWorkOrderId" class="font-bold text-amber">WO-98421</p>
+            </div>
+            <div>
+              <span class="text-[10px] uppercase text-slate-500">SAP Req ID</span>
+              <p id="poSapReqId" class="font-bold text-signal">PR-44109</p>
+            </div>
+            <div>
+              <span class="text-[10px] uppercase text-slate-500">Asset Tag</span>
+              <p id="poAssetId" class="font-bold text-white">DMG_MORI_DMU_50</p>
+            </div>
+            <div>
+              <span class="text-[10px] uppercase text-slate-500">Est. Downtime</span>
+              <p id="poDowntime" class="font-bold text-red-400">6.5 Hours</p>
+            </div>
+          </div>
+
+          <!-- Root cause / Visual correlation -->
+          <div>
+            <span class="font-semibold text-slate-300">Failure Analysis & CCTV Evidence:</span>
+            <p id="poFailureAnalysis" class="mt-1 rounded border border-line/60 bg-ink/40 p-2.5 leading-relaxed text-slate-300"></p>
+          </div>
+
+          <!-- Grounded OEM Manual Citation -->
+          <div>
+            <span class="font-semibold text-slate-300">Grounded OEM Manual & Specification Citation:</span>
+            <p id="poManualCitation" class="mt-1 font-mono text-[11px] text-signal rounded border border-line/60 bg-ink/40 p-2.5 leading-relaxed"></p>
+          </div>
+
+          <!-- Bill of Materials (BOM) Table -->
+          <div>
+            <span class="font-semibold text-slate-300">Required OEM Replacement Assemblies (BOM):</span>
+            <div class="mt-1.5 overflow-x-auto rounded border border-line">
+              <table class="w-full text-left">
+                <thead class="border-b border-line bg-ink/80 text-[10px] uppercase text-slate-400">
+                  <tr>
+                    <th class="p-2">Part Description</th>
+                    <th class="p-2">OEM SKU</th>
+                    <th class="p-2">Vendor</th>
+                    <th class="p-2 text-center">Qty</th>
+                    <th class="p-2 text-right">Unit Price</th>
+                    <th class="p-2 text-right">Lead Time</th>
+                  </tr>
+                </thead>
+                <tbody id="poPartsTable" class="divide-y divide-line/60 font-mono text-[11px] text-slate-300">
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Technician spec & Total Cost -->
+          <div class="flex flex-col justify-between gap-3 rounded-md border border-line bg-ink/40 p-3 sm:flex-row sm:items-center">
+            <div>
+              <span class="text-[10px] uppercase text-slate-500">Required Technician Spec</span>
+              <p id="poTechSpec" class="font-medium text-slate-200">ISO 18436-2 Vibration Analyst Cat II</p>
+            </div>
+            <div class="sm:text-right">
+              <span class="text-[10px] uppercase text-slate-500">Total Purchase Requisition</span>
+              <p id="poTotalCost" class="text-base font-bold text-emerald-400">$1,450.00 USD</p>
+            </div>
+          </div>
+
+          <!-- Drafted Vendor Email Requisition -->
+          <div>
+            <div class="flex items-center justify-between">
+              <span class="font-semibold text-slate-300">Autonomous Vendor PO Email Requisition:</span>
+              <button id="copyEmailBtn" type="button" class="inline-flex items-center gap-1 text-[10px] text-signal hover:underline">
+                <i data-lucide="copy" class="h-3 w-3"></i> Copy Draft
+              </button>
+            </div>
+            <pre id="poEmailDraft" class="mt-1 max-h-32 overflow-y-auto whitespace-pre-wrap rounded border border-line/60 bg-black/50 p-2.5 font-mono text-[11px] leading-relaxed text-slate-400 scrollbar-thin"></pre>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="mt-6 flex flex-col gap-3 border-t border-line pt-4 sm:flex-row sm:justify-end">
+          <button id="rejectPoBtn" type="button" class="rounded border border-line px-4 py-2 text-xs font-medium text-slate-400 hover:bg-white/5 hover:text-white transition">
+            Dismiss (No Requisition)
+          </button>
+          <button id="approvePoBtn" type="button" class="inline-flex items-center justify-center gap-2 rounded bg-red-500 px-5 py-2 text-xs font-semibold text-white shadow-lg shadow-red-500/20 hover:bg-red-600 transition">
+            <i data-lucide="shield-alert" class="h-4 w-4"></i>
+            Approve Requisition & Execute Lockout
+          </button>
+        </div>
+      </div>
+    </div>
 
     <div id="toast" role="status" aria-live="polite" class="pointer-events-none fixed bottom-5 right-5 z-[70] translate-y-3 opacity-0 transition-all duration-200"></div>
   </div>
