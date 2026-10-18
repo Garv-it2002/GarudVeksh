@@ -80,6 +80,8 @@ class DashboardBridgeJS {
     this._serviceStates = { watcher: "stopped", ai_agent: "stopped" };
     this._tabId = Math.random().toString(36).substring(2, 9);
     this._seenCommandResults = new Set();
+    this._firestore = null;
+    this._firestoreUnsubscribe = null;
     this._channel = typeof BroadcastChannel !== "undefined" ? new BroadcastChannel("nexus_dashboard_bridge") : null;
 
     if (this._channel) {
@@ -233,13 +235,101 @@ class DashboardBridgeJS {
     } catch (e) {}
   }
 
+  _initFirestore() {
+    if (this._firestore) return this._firestore;
+    try {
+      const globalConfig = typeof CONFIG !== "undefined" ? CONFIG : (typeof window !== "undefined" ? window.CONFIG : null);
+      const fbConfig = globalConfig?.FIREBASE_CONFIG;
+      if (typeof firebase !== "undefined" && fbConfig && fbConfig.projectId && fbConfig.apiKey) {
+        if (!firebase.apps || !firebase.apps.length) {
+          firebase.initializeApp(fbConfig);
+        }
+        this._firestore = firebase.firestore();
+        return this._firestore;
+      }
+    } catch (e) {
+      console.warn("[Firestore] Initialization error:", e);
+    }
+    return null;
+  }
+
+  _subscribeFirestore(db) {
+    if (this._firestoreUnsubscribe) return;
+    try {
+      this._firestoreUnsubscribe = db.collection("machine_registry").onSnapshot((snapshot) => {
+        if (snapshot.empty) return;
+        const updated = {};
+        snapshot.forEach((doc) => {
+          updated[doc.id] = doc.data();
+        });
+        if (updated.DMG_MORI_DMU_50) {
+          this._registry = updated;
+          this._saveRegistry();
+          this._emit({ type: "registry_snapshot", machines: this._registry });
+        }
+      }, (err) => {
+        console.warn("[Firestore] Real-time listener error:", err);
+      });
+    } catch (e) {}
+  }
+
   async _fetchInitialRegistry() {
+    const db = this._initFirestore();
+    if (db) {
+      try {
+        const snap = await db.collection("machine_registry").get();
+        if (!snap.empty) {
+          const firestoreRegistry = {};
+          snap.forEach((doc) => {
+            firestoreRegistry[doc.id] = doc.data();
+          });
+          if (firestoreRegistry.DMG_MORI_DMU_50) {
+            console.log("[Firestore] Authoritative machine registry loaded from Cloud Firestore.");
+            this._registry = firestoreRegistry;
+            this._saveRegistry();
+            this._emit({ type: "registry_snapshot", machines: this._registry });
+            this._restoreRuntimeState();
+            this._subscribeFirestore(db);
+            return;
+          }
+        } else {
+          console.log("[Firestore] 'machine_registry' collection is empty. Attempting auto-seed from machine_registry.json...");
+          const resp = await fetch('./machine_registry.json?v=' + Date.now());
+          if (resp.ok) {
+            const json = await resp.json();
+            for (const [mId, data] of Object.entries(json)) {
+              try {
+                await db.collection("machine_registry").doc(mId).set(data);
+                console.log(`[Firestore] Successfully seeded ${mId}`);
+              } catch (writeErr) {
+                console.warn(`[Firestore] Could not write ${mId} (check write rules):`, writeErr.message);
+              }
+            }
+            const postSeedSnap = await db.collection("machine_registry").get();
+            if (!postSeedSnap.empty) {
+              const firestoreRegistry = {};
+              postSeedSnap.forEach((doc) => { firestoreRegistry[doc.id] = doc.data(); });
+              this._registry = firestoreRegistry;
+              this._saveRegistry();
+              this._emit({ type: "registry_snapshot", machines: this._registry });
+              this._restoreRuntimeState();
+              this._subscribeFirestore(db);
+              return;
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("[Firestore] Read error (falling back to machine_registry.json):", err);
+      }
+    }
+
+    // Resilient Fallback: local machine_registry.json
     try {
       const resp = await fetch('./machine_registry.json?v=' + Date.now());
       if (resp.ok) {
         const json = await resp.json();
         if (json && typeof json === 'object') {
-          this._registry = json; // Authoritative machine_registry.json prevents stale localStorage cache corruptions
+          this._registry = json;
           this._saveRegistry();
           this._emit({ type: "registry_snapshot", machines: this._registry });
           this._restoreRuntimeState();
