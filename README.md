@@ -26,57 +26,7 @@ Industrial downtime costs Global 2000 manufacturers over **$50 billion annually*
 
 ## 📐 Enterprise Architecture
 
-```mermaid
-graph TB
-    subgraph OT_ShopFloor["🏭 Shop Floor & Industrial Assets (Edge Physics)"]
-        M1["DMG MORI DMU 50<br/>(5-Axis CNC Mill)"]
-        M2["Schuler 200-Ton<br/>(Hydraulic Press)"]
-        M3["Siemens Sinamics S120<br/>(VFD Conveyor Drive)"]
-        CAM["CCTV Optical Vision<br/>(High-Speed Camera Stream)"]
-    end
-
-    subgraph EdgeGateway["⚡ Garduveksh Edge Intelligence Core"]
-        BW["Background Clock Worker<br/>(Unthrottled 500ms Worker)"]
-        WG["Edge Watcher & Z-Score Engine<br/>(Gaussian Deviation Detector)"]
-        DISP["Control Command Dispatcher<br/>(Closed-Loop PLC Actuator)"]
-    end
-
-    subgraph CloudSecurity["🛡️ Enterprise Security Gateway"]
-        GAS["Google Cloud Secure Proxy<br/>(Cloud KMS Secret Storage + CORS Bypass)"]
-    end
-
-    subgraph NeuralCore["🧠 Garduveksh Multi-Agent Core"]
-        A1["Agent 1: Optical Vision Triage<br/>(Telemetry + CCTV Cross-Examination)"]
-        A2["Agent 2: Closed-Loop Remediation<br/>(Native Tool / Function Execution)"]
-        A3["Agent 3: Compliance Auditor<br/>(ISA-84 / SIL-2 / SIL-3 Policy Gate)"]
-        A4["Agent 4: Supply Chain Requisition<br/>(ServiceNow CMMS & SAP MM Integration)"]
-    end
-
-    subgraph EnterpriseIT["🏢 Enterprise IT & Human Supervision"]
-        UI["Real-Time SCADA Operations Dashboard<br/>(HITL Work Order & Requisition Modal)"]
-        SAP["ServiceNow CMMS / SAP ERP<br/>(Automated Purchase Requisitions)"]
-    end
-
-    M1 -->|Sparkplug B Telemetry| WG
-    M2 -->|Sparkplug B Telemetry| WG
-    M3 -->|Sparkplug B Telemetry| WG
-    CAM -->|CCTV Frame| WG
-    BW -->|Sync Pulse| M1
-    BW -->|Sync Pulse| M2
-    BW -->|Sync Pulse| M3
-
-    WG -->|Unified Anomaly Payload| GAS
-    GAS -->|Server-to-Server Token Call| NeuralCore
-    A1 --> A2 --> A3 --> A4
-
-    NeuralCore -->|Unified Multi-Agent JSON| UI
-    UI -->|SIL-1 Autonomous Override| DISP
-    UI -->|SIL-2/3 Human Authorization Required| UI
-    UI -->|Operator Dispatched Work Order| SAP
-    DISP -->|OPC UA Setpoint Write| M1
-    DISP -->|OPC UA Setpoint Write| M2
-    DISP -->|OPC UA Setpoint Write| M3
-```
+<img width="4838" height="2996" alt="Flowcharts (3)" src="https://github.com/user-attachments/assets/e870db84-dbb8-405b-8fdd-3a2bcde6fb47" />
 
 ---
 
