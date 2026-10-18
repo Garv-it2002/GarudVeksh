@@ -26,7 +26,7 @@ Industrial downtime costs Global 2000 manufacturers over **$50 billion annually*
 
 ## 📐 Enterprise Architecture
 
-<img width="4838" height="2996" alt="Flowcharts (3)" src="https://github.com/user-attachments/assets/e870db84-dbb8-405b-8fdd-3a2bcde6fb47" />
+<img width="4838" height="2996" alt="Flowcharts (1)" src="https://github.com/user-attachments/assets/13818522-7aed-414c-a741-e4ef5728798c" />
 
 ---
 
